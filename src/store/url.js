@@ -1,1 +1,1 @@
-export const baseUrl = "https://technotes-api.onrender.com";
+export const baseUrl = "https://technotes-api-bqwz.onrender.com";
