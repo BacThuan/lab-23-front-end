@@ -8,12 +8,12 @@ import Feed from "./pages/feed/Feed";
 import SinglePost from "./pages/feed/SinglePost/SinglePost";
 
 import { useDispatch, useSelector } from "react-redux";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 
 function App() {
   const dispatch = useDispatch();
+
   const error = useSelector((state) => state.error);
-  const isAuth = useSelector((state) => state.isAuth);
   const errorHandler = () => {
     dispatch({ type: "ERROR", error: null });
   };
@@ -49,8 +49,8 @@ function App() {
       errorElement: <ErrorHandler error={error} onHandle={errorHandler} />,
       children: [
         {
-          index: isAuth ? "feed" : true,
-          element: isAuth ? <Feed /> : <Login />,
+          index: true,
+          element: <Login />,
         },
         { path: "sign-up", element: <Signup /> },
         { path: "feed", element: <Feed /> },
