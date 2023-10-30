@@ -1,6 +1,6 @@
-import React, { Component, Fragment, useState, useEffect } from "react";
+import React, { Fragment, useState, useEffect } from "react";
 import openSocket from "socket.io-client";
-import { UseSelector, useSelector } from "react-redux/es/hooks/useSelector";
+import { useSelector } from "react-redux/es/hooks/useSelector";
 import Post from "../../component/Feed/Post/Post";
 import Button from "../../component/Button/Button";
 import FeedEdit from "../../component/Feed/FeedEdit/FeedEdit";
@@ -22,6 +22,31 @@ const Feed = () => {
   const [editLoading, setEditLoading] = useState(false);
 
   const token = useSelector((state) => state.token);
+  const socket = openSocket(baseUrl, {
+    withCredentials: true,
+  });
+
+  // get data per page
+  const getPageData = (page) => {
+    fetch(baseUrl + "/feed/posts?page=" + page, {
+      headers: {
+        Authorization: "Bearer " + token,
+      },
+    })
+      .then((res) => {
+        if (res.status !== 200) {
+          throw new Error("Failed to fetch posts.");
+        }
+
+        return res.json();
+      })
+      .then((resData) => {
+        setPosts(resData.posts);
+        setTotal(resData.totalItems);
+        setPostLoading(false);
+      })
+      .catch(catchError);
+  };
 
   // update status
   const statusUpdateHandler = (event) => {
@@ -63,26 +88,8 @@ const Feed = () => {
       page--;
       setPostPage(page);
     }
-    fetch(baseUrl + "/feed/posts?page=" + page, {
-      headers: {
-        Authorization: "Bearer " + token,
-      },
-    })
-      .then((res) => {
-        if (res.status !== 200) {
-          throw new Error("Failed to fetch posts.");
-        }
 
-        return res.json();
-      })
-      .then((resData) => {
-        console.log(resData);
-        setPosts(resData.posts);
-
-        setTotal(resData.totalItems);
-        setPostLoading(false);
-      })
-      .catch(catchError);
+    getPageData(page);
   };
 
   // delete post
@@ -93,7 +100,6 @@ const Feed = () => {
       method: "DELETE",
       headers: {
         Authorization: "Bearer " + token,
-        "Access-Control-Allow-Methods": "DELETE",
       },
     })
       .then((res) => {
@@ -102,11 +108,11 @@ const Feed = () => {
         }
         return res.json();
       })
-      .then((resData) => {
-        const updatedPosts = posts.filter((p) => p._id !== postId);
-        setPosts(updatedPosts);
-        setPostLoading(false);
-      })
+      // .then((resData) => {
+      //   const updatedPosts = posts.filter((p) => p._id !== postId);
+      //   setPosts(updatedPosts);
+      //   setPostLoading(false);
+      // })
       .catch((err) => {
         console.log(err);
         setPostLoading(false);
@@ -161,28 +167,6 @@ const Feed = () => {
         // return res.json();
       })
       .then((resData) => {
-        // console.log(resData);
-
-        // const post = {
-        //   _id: resData.post._id,
-        //   title: resData.post.title,
-        //   content: resData.post.content,
-        //   creator: resData.post.creator.name,
-        //   createdAt: resData.post.createdAt,
-        // };
-        // let updatedPosts = posts;
-
-        // edit post
-        // if (editPost) {
-        //   const postIndex = posts.findIndex((p) => p._id === editPost._id);
-        //   updatedPosts[postIndex] = post;
-        // }
-        //   // only 1 post
-        //   else if (posts.length < 2) {
-        //     updatedPosts = posts.concat(post);
-        //   }
-
-        // setPosts(updatedPosts);
         setEdit(false);
         setEditPost(null);
         setEditLoading(false);
@@ -220,21 +204,25 @@ const Feed = () => {
   // tao bai post
   const addPost = (post) => {
     let updatedPosts = posts;
-    if (updatedPosts.length <= 1) {
-      updatedPosts.push(post);
+    if (postPage === 1) {
+      if (posts.length === 2) {
+        updatedPosts.pop();
+      }
+      updatedPosts.unshift(post);
     }
-
     setPosts(updatedPosts);
+    setTotal(totalPosts + 1);
   };
 
   // update post
   const updatePost = (post) => {
-    let updatedPosts = posts;
+    if (posts.length > 0) {
+      let updatedPosts = posts;
+      const index = updatedPosts.findIndex((p) => p._id === post._id);
 
-    const postIndex = posts.findIndex((p) => p._id === post._id);
-    if (postIndex > -1) updatedPosts[postIndex] = post;
-
-    setPosts(updatedPosts);
+      updatedPosts[index] = post;
+      setPosts(updatedPosts);
+    }
   };
 
   // is auth ?
@@ -252,15 +240,15 @@ const Feed = () => {
         return res.json();
       })
       .then((resData) => {
+        console.log("FETCH");
         setStatus(resData.status);
       })
       .catch(catchError);
 
     loadPosts();
-    const socket = openSocket(baseUrl, {
-      withCredentials: true,
-    });
+  }, []);
 
+  useEffect(() => {
     socket.on("posts", (data) => {
       if (data.action === "create") {
         addPost(data.post);
@@ -270,8 +258,7 @@ const Feed = () => {
         loadPosts();
       }
     });
-  }, []);
-
+  }, [posts, postPage]);
   return (
     <Fragment>
       <ErrorHandler error={error} onHandle={errorHandler} />
