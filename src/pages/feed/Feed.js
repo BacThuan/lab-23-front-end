@@ -257,7 +257,7 @@ const Feed = () => {
       .catch(catchError);
 
     loadPosts();
-    const socket = openSocket("", {
+    const socket = openSocket(baseUrl, {
       withCredentials: true,
     });
 
