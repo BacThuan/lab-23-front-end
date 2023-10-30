@@ -15,6 +15,9 @@ function MainNavigation() {
 
   useEffect(() => {
     setAuth(isSignIn);
+    if (isSignIn) {
+      navigate("/feed");
+    }
   }, [isSignIn]);
 
   const logout = () => {
